@@ -203,56 +203,64 @@ export async function sleep(ms) {
 // Main
 const url = 'https://www.secure-hotel-booking.com/d-edge/redirect/2DSI/RoomSelection';
 
+let browser;
+
 (async () => {
-  const browser = await getScrapingBrowser();
-  const { page, client } = await getPage(browser);
-  await openDebugger(page, client);
-
-  const pageResponse = await page.goto(url, {
-    timeout: 120000,
-    waitUntil: "domcontentloaded",
-  });
-
-  console.log(pageResponse.status());
-
-  await page.waitForSelector("#app");
-
-  // Wait for loading spinner to disappear
-  await page.waitForSelector("#app>div[style]", {
-    hidden: true,
-  });
-
-  // Wait for date button to be displayed
-  await page.waitForSelector('[data-testid="arrival-date-display"]');
-
-  // Scroll to the date button
-  await page.evaluate(() => {
-    document
-      .querySelector('[data-testid="arrival-date-display"]')
-      .scrollIntoView();
-  });
-
-  // Click on the date button
-  await page.click('[data-testid="arrival-date-display"]');
-
-  // Wait 10sec or until geo captcha is displayed
   try {
-    await page.waitForSelector("iframe[src*='geo.captcha-delivery.com']", {
-      timeout: 10000,
+    browser = await getScrapingBrowser();
+    const { page, client } = await getPage(browser);
+    await openDebugger(page, client);
+  
+    const pageResponse = await page.goto(url, {
+      timeout: 120000,
+      waitUntil: "domcontentloaded",
     });
+  
+    console.log(pageResponse.status());
+  
+    await page.waitForSelector("#app");
+  
+    // Wait for loading spinner to disappear
+    await page.waitForSelector("#app>div[style]", {
+      hidden: true,
+    });
+  
+    // Wait for date button to be displayed
+    await page.waitForSelector('[data-testid="arrival-date-display"]');
+  
+    // Scroll to the date button
+    await page.evaluate(() => {
+      document
+        .querySelector('[data-testid="arrival-date-display"]')
+        .scrollIntoView();
+    });
+  
+    // Click on the date button
+    await page.click('[data-testid="arrival-date-display"]');
+  
+    // Wait 10sec or until geo captcha is displayed
+    try {
+      await page.waitForSelector("iframe[src*='geo.captcha-delivery.com']", {
+        timeout: 10000,
+      });
+    } catch (e) {
+      console.log("No captcha found");
+    }
+  
+    if (await page.$("iframe[src*='geo.captcha-delivery.com']")) {
+      console.log("Captcha found");
+      const { status } = await client.send("Captcha.solve", {
+        detectTimeout: 30 * 1000,
+      });
+      console.log(`Captcha solve status: ${status}`);
+    }
+  
+    // End for now
+    await browser.close();
+    process.exit(0);
   } catch (e) {
-    console.log("No captcha found");
+    console.error(e);
+    browser?.close();
+    process.exit
   }
-
-  if (await page.$("iframe[src*='geo.captcha-delivery.com']")) {
-    console.log("Captcha found");
-    const { status } = await client.send("Captcha.solve", {
-      detectTimeout: 30 * 1000,
-    });
-    console.log(`Captcha solve status: ${status}`);
-  }
-
-  // End for now
-  await browser.close();
-  process.exit(0);
 })();
