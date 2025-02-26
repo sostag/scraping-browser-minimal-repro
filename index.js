@@ -94,7 +94,7 @@ let browser;
     // Wait for the page to load
     await page.waitForSelector(".searchBar-submitBtn:not(.isLoading)");
 
-    log("Search button found");
+    console.log("Search button found");
 
     // End for now
     await browser.close();
